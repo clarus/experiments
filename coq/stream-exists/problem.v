@@ -1,3 +1,6 @@
+Require Coq.Logic.ClassicalChoice.
+Require Coq.Logic.ChoiceFacts.
+
 Parameter T: Type.
 Parameter R: T -> T -> Prop.
 
@@ -24,37 +27,40 @@ Proof.
 Abort.
 
 Module WithConstructiveExists.
-  Parameter exists_all_bis: forall a, {a': T | R a a'}.
-
-  CoFixpoint matching_stream (s: stream): stream.
+  CoFixpoint matching_stream
+    (exists_all: forall a, {a': T | R a a'})
+    (s: stream)
+    : stream.
     destruct s as [a s'].
-    destruct (exists_all_bis a) as [a'].
-    exact (sintro a' (matching_stream s')).
+    destruct (exists_all a) as [a'].
+    exact (sintro a' (matching_stream exists_all s')).
   Defined.
 
-  CoFixpoint matching_stream_is_matching (s: stream): smatch s (matching_stream s).
+  CoFixpoint matching_stream_is_matching
+    (exists_all: forall a, {a': T | R a a'})
+    (s: stream)
+    : smatch s (matching_stream exists_all s).
   Proof.
     destruct s as [a s'].
     rewrite stream_eta.
     simpl.
-    destruct (exists_all_bis a) as [a' R_a_a'].
+    destruct (exists_all a) as [a' R_a_a'].
     apply smatch_intro.
     - exact R_a_a'.
     - apply matching_stream_is_matching.
   Qed.
 
-  Theorem stream_ex:
-    forall s, exists s', smatch s s'.
+  Theorem stream_ex
+    (exists_all: forall a, {a': T | R a a'})
+    : forall s, exists s', smatch s s'.
   Proof.
     intro s.
-    exists (matching_stream s).
+    exists (matching_stream exists_all s).
     apply matching_stream_is_matching.
   Qed.
 End WithConstructiveExists.
 
 Module WithChoiceAxiom.
-  Require Coq.Logic.ClassicalChoice.
-
   Definition choice_axiom_instance :=
     ClassicalChoice.choice (A := T) (B := T) R.
 
@@ -87,3 +93,19 @@ Module WithChoiceAxiom.
       apply (matching_stream_is_matching f f_is_sound).
   Qed.
 End WithChoiceAxiom.
+
+Module WithChoiceAxiomAndConstructiveExists.
+  Theorem stream_ex:
+    forall s, exists s', smatch s s'.
+  Proof.
+    apply ChoiceFacts.relative_non_contradiction_of_indefinite_descr.
+    - intros H s.
+      apply WithConstructiveExists.stream_ex.
+      intro a.
+      unfold ChoiceFacts.ConstructiveIndefiniteDescription_on in H.
+      apply H with (P := fun a' => R a a').
+      apply exists_all.
+    - unfold ChoiceFacts.FunctionalChoice_on.
+      apply ClassicalChoice.choice.
+  Qed.
+End WithChoiceAxiomAndConstructiveExists.
