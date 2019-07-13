@@ -109,3 +109,80 @@ Module WithChoiceAxiomAndConstructiveExists.
       apply ClassicalChoice.choice.
   Qed.
 End WithChoiceAxiomAndConstructiveExists.
+
+(* Asked by Christian Doczkal. *)
+Module SupplementaryExercise.
+  CoInductive stream (T: Type) : Type :=
+  | sintro: forall a: T, stream T -> stream T.
+
+  Lemma stream_eta {T: Type} (s: stream T): s = match s with sintro _ a s' => sintro _ a s' end.
+  Proof.
+    destruct s; reflexivity.
+  Qed.
+
+  CoInductive smatch {T: Type} (R: T -> T -> Prop) : stream T -> stream T -> Prop :=
+  | smatch_intro:
+    forall (a1 a2: T) (s1' s2': stream T),
+    R a1 a2 ->
+    smatch R s1' s2'  ->
+    smatch R (sintro T a1 s1') (sintro T a2 s2').
+
+  Definition stream_ex :=
+    forall T (R : T -> T -> Prop),
+      (forall a, exists a', R a a') -> forall s, exists s', smatch R s s'.
+
+  CoFixpoint counting_stream {X: Type} (x: X) (n: nat): stream (nat * X) :=
+    sintro _ (n, x) (counting_stream x (S n)).
+
+  Fixpoint nth {T: Type} (s: stream T) (n: nat): T :=
+    let (a, s') := s in
+    match n with
+    | O => a
+    | S n' => nth s' n'
+    end.
+
+  Fixpoint nth_counting_stream {X: Type} (x: X) (n m: nat): nth (counting_stream x m) n = (n + m, x).
+    destruct n as [| n']; simpl.
+    - reflexivity.
+    - rewrite plus_n_Sm.
+      apply (nth_counting_stream _ x n' (S m)).
+  Qed.
+
+  Fixpoint nth_smatch_streams
+    {T: Type}
+    {R: T -> T -> Prop}
+    (s1 s2: stream T)
+    (H_smatch: smatch R s1 s2)
+    (n: nat)
+    : R (nth s1 n) (nth s2 n).
+    destruct n as [| n'].
+    - destruct H_smatch.
+      simpl.
+      assumption.
+    - destruct H_smatch.
+      simpl.
+      apply nth_smatch_streams.
+      assumption.
+  Qed.
+
+  Theorem stream_ex_implies_countable_choice X (P : nat -> X -> Prop) :
+    stream_ex -> (forall n, exists x, P n x) -> exists f, forall n, P n (f n).
+  Proof.
+    intros H_stream_ex H_exists.
+    pose (T := (nat* X)%type).
+    pose (R := fun (x y: T) => P (fst x) (snd y)).
+    destruct (H_exists O) as [x].
+    assert (H_exists_R: forall ny, exists n'y', R ny n'y').
+    - intro ny; destruct ny as [n y].
+      destruct (H_exists n) as [y' Hy'].
+      exists (n, y').
+      apply Hy'.
+    - destruct (H_stream_ex _ R H_exists_R (counting_stream x O)) as [s Hs].
+      exists (fun n => snd (nth s n)).
+      intro n.
+      replace n with (fst (n, x)) at 1; trivial.
+      rewrite (plus_n_O n) at 1.
+      rewrite <- nth_counting_stream.
+      apply (nth_smatch_streams (counting_stream x 0) s Hs).
+  Qed.
+End SupplementaryExercise.
