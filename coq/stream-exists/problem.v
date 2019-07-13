@@ -43,7 +43,7 @@ Module WithConstructiveExists.
     - apply matching_stream_is_matching.
   Qed.
 
-  Theorem stream_ex_bis:
+  Theorem stream_ex:
     forall s, exists s', smatch s s'.
   Proof.
     intro s.
@@ -51,3 +51,39 @@ Module WithConstructiveExists.
     apply matching_stream_is_matching.
   Qed.
 End WithConstructiveExists.
+
+Module WithChoiceAxiom.
+  Require Coq.Logic.ClassicalChoice.
+
+  Definition choice_axiom_instance :=
+    ClassicalChoice.choice (A := T) (B := T) R.
+
+  CoFixpoint matching_stream (f: T -> T) (s: stream): stream :=
+    match s with
+    | sintro a s' => sintro (f a) (matching_stream f s')
+    end.
+
+  CoFixpoint matching_stream_is_matching
+    (f: T -> T)
+    (f_is_sound: forall a, R a (f a))
+    (s: stream)
+    : smatch s (matching_stream f s).
+  Proof.
+    destruct s as [a s'].
+    rewrite stream_eta.
+    simpl in *.
+    apply smatch_intro.
+    - apply f_is_sound.
+    - apply matching_stream_is_matching; trivial.
+  Qed.
+
+  Theorem stream_ex:
+    forall s, exists s', smatch s s'.
+  Proof.
+    intro s.
+    destruct choice_axiom_instance as [f f_is_sound].
+    - exact exists_all.
+    - exists (matching_stream f s).
+      apply (matching_stream_is_matching f f_is_sound).
+  Qed.
+End WithChoiceAxiom.
