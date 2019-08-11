@@ -1,0 +1,17 @@
+{
+  "manifest_version": 2,
+  "name": "flip-text",
+  "version": "1.0",
+
+  "description": "Flip Ethereum and Ether words on web pages",
+
+  "content_scripts": [
+    {
+      "matches": ["*://*/*"],
+      "js": [
+        "mark.min.js",
+        "flip-text.js"
+      ]
+    }
+  ]
+}
