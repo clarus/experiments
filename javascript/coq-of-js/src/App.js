@@ -18,6 +18,12 @@ export default class App extends PureComponent<Props, State> {
     jsInput:
       `// Some examples
 
+const
+  b = false,
+  n: number = 12;
+
+const s = "hi";
+
 function id<A, B>(x: A): A {
   return x;
 }
